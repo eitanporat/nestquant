@@ -16,6 +16,8 @@ from parallel.ppl_utils import split_dataset, get_wikitext2
 from parallel.config import no_q_config
 
 
+torch.set_float32_matmul_precision("high")
+
 def is_linear(module):
     return isinstance(module, ColumnParallelLinear) or \
            isinstance(module, RowParallelLinear)
@@ -26,6 +28,7 @@ class Hessian:
         in_features     = module.in_features
         self.dst_rank   = dst_rank
         self.is_main    = (dst_rank == get_rank())
+        print(get_rank(), dst_rank)
         self.keep_on_gpu = keep_on_gpu
 
         device = "cuda" if keep_on_gpu else "cpu"
@@ -101,7 +104,7 @@ def run_in_chunks(
 
         for layer_name, h in hessians.items():
             if h.is_main:
-                torch.save(h.get() / N, os.path.join(store_path, layer_name))
+                torch.save(h.get() / wikitext.numel(), os.path.join(store_path, layer_name))
             h.remove()
 
         torch.cuda.empty_cache()               

@@ -7,13 +7,13 @@ import torch.distributed as dist
 
 torch.set_float32_matmul_precision("high")
 
-from hessian import Hessian as _Hessian, is_linear        # noqa: E402
-from parallel.start import start                          # noqa: E402
-from parallel.config import no_q_config                   # noqa: E402
-from parallel.ppl_utils import split_dataset, get_wikitext2  # noqa: E402
-from config import create_config                          # noqa: E402
-from quant_utils import quantsim, quantsim_col            # noqa: E402
-from hadamard import kron_h_ip                            # noqa: E402
+from hessian import Hessian as _Hessian, is_linear
+from parallel.start import start
+from parallel.config import no_q_config
+from parallel.ppl_utils import split_dataset, get_wikitext2
+from config import create_config
+from quant_utils import quantsim, quantsim_col
+from hadamard import kron_h_ip
 
 
 def is_col(weight_name: str) -> bool:
@@ -21,11 +21,7 @@ def is_col(weight_name: str) -> bool:
 
 
 def get_world_size() -> int:
-    return (
-        dist.get_world_size()
-        if dist.is_available() and dist.is_initialized()
-        else 1
-    )
+    return dist.get_world_size() if dist.is_available() and dist.is_initialized() else 1
 
 
 class Hessian(_Hessian):
@@ -41,11 +37,11 @@ class Hessian(_Hessian):
 
 
 def shared_input_key(name: str) -> str:
-    if ".attention.w" in name:          # wq, wk, wv
+    if ".attention.w" in name:
         return name.split(".attention.")[0] + ".attention"
     if ".feed_forward.w1" in name or ".feed_forward.w3" in name:
         return name.split(".feed_forward.")[0] + ".feed_forward_w13"
-    return name                         # all other layers keep their own key
+    return name
 
 
 def parse_arguments():
@@ -71,21 +67,14 @@ def parse_arguments():
 
 def main():
     args = parse_arguments()
-    ckpt_path = args.ckpt_path
-    is_llama_2 = args.is_llama_2 == "True"
-    store_path = args.store_path
-    hess_path = args.hess_path
-    seqlen = args.seqlen
-    L = args.L
-    R = args.R
-
-    model, tokenizer = start(ckpt_path, is_llama_2, no_q_config)
+    model, tokenizer = start(args.ckpt_path,
+                             args.is_llama_2 == "True",
+                             no_q_config)
     model.cuda().eval()
-
-    world_size = get_world_size()
-
-    wikitext = get_wikitext2(tokenizer=tokenizer, is_testset=False)
-    wikitext = split_dataset(wikitext, seqlen)
+    wikitext = split_dataset(
+        get_wikitext2(tokenizer=tokenizer, is_testset=False),
+        args.seqlen
+    )
 
     modules = sorted(
         [(n, m) for n, m in model.named_modules() if is_linear(m)],
@@ -101,47 +90,43 @@ def main():
         value_betas=args.value_betas,
     )
 
-    group_H = {}           # key → observed Hessian (FᵀF / N)
-
+    world_size = get_world_size()
     batch_size = 8
-    tot = wikitext.shape[0]
+    total = wikitext.shape[0]
+
+    group_H: dict[str, torch.Tensor] = {}
+    N = wikitext.shape[0]                
 
     for idx, (name, module) in enumerate(modules):
-        if L is not None and idx < L:
+        if args.L is not None and idx < args.L:
             continue
-        if R is not None and idx >= R:
+        if args.R is not None and idx >= args.R:
             continue
 
         gkey = shared_input_key(name)
-
         if gkey not in group_H:
             with Hessian(module,
                          dst_rank=idx % max(world_size, 1),
                          keep_on_gpu=True) as H:
-                for j in tqdm(
-                    range(0, tot, batch_size),
-                    desc=f"H[{gkey}]",
-                    leave=False,
-                ):
-                    batch = wikitext[j : j + batch_size].cuda()
+                for i in tqdm(range(0, total, batch_size),
+                              desc=f"H[{gkey}]", leave=False):
+                    batch = wikitext[i : i + batch_size].cuda()
                     model(batch, start_pos=0)
+                H_obs = H.get() / wikitext.numel()
+            group_H[gkey] = H_obs
 
-            group_H[gkey] = H.H.clone()
-
-        H_obs = group_H[gkey]
+        H_obs = group_H[gkey].cuda()
         clean_H = torch.load(
-            os.path.join(hess_path, f"{name}.pt"),
+            os.path.join(args.hess_path, f"{name}"),
             map_location="cuda",
             weights_only=True,
         ).float()
 
         J = H_obs - clean_H
-
+        
         betas = (
-            args.act_betas
-            if "act" in name
-            else args.key_betas
-            if "key" in name
+            args.act_betas if "act" in name
+            else args.key_betas if "key" in name
             else args.value_betas
         )
 
@@ -151,7 +136,7 @@ def main():
                 args.q,
                 betas,
                 rot=kron_h_ip,
-                H=clean_H,
+                H=H_obs,
                 J=J,
             )
         else:
@@ -160,18 +145,16 @@ def main():
                 args.q,
                 betas,
                 rot=kron_h_ip,
-                H=clean_H,
+                H=H_obs,
                 J=J,
             )
 
         module.qconfig = qconfig
         torch.cuda.empty_cache()
 
-    os.makedirs(store_path, exist_ok=True)
-    torch.save(
-        model.state_dict(),
-        os.path.join(store_path, "quantized_model.pth"),
-    )
+    os.makedirs(args.store_path, exist_ok=True)
+    torch.save(model.state_dict(),
+               os.path.join(args.store_path, "quantized_model.pth"))
 
 
 if __name__ == "__main__":
