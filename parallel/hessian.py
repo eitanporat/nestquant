@@ -28,7 +28,6 @@ class Hessian:
         in_features     = module.in_features
         self.dst_rank   = dst_rank
         self.is_main    = (dst_rank == get_rank())
-        print(get_rank(), dst_rank)
         self.keep_on_gpu = keep_on_gpu
 
         device = "cuda" if keep_on_gpu else "cpu"
@@ -103,8 +102,11 @@ def run_in_chunks(
             model(batch, start_pos=0)         
 
         for layer_name, h in hessians.items():
+            final_hessian = h.get() / wikitext.numel()
+            final_hessian_norm_mean = (final_hessian ** 2).mean().item()
+            print(f"Layer {layer_name} final Hessian norm mean: {final_hessian_norm_mean}")
             if h.is_main:
-                torch.save(h.get() / wikitext.numel(), os.path.join(store_path, layer_name))
+                torch.save(final_hessian, os.path.join(store_path, layer_name))
             h.remove()
 
         torch.cuda.empty_cache()               

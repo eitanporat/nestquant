@@ -15,6 +15,11 @@ from config import create_config
 from quant_utils import quantsim, quantsim_col
 from hadamard import kron_h_ip
 
+weight_order = ["wk", "wv", "wq", "wo", "w1", "w3", "w2"]
+prio = {suffix: idx for idx, suffix in enumerate(weight_order)}
+DEFAULT = len(prio)  
+INF      = float("inf")
+
 
 def is_col(weight_name: str) -> bool:
     return "w2" in weight_name or "wo" in weight_name
@@ -22,6 +27,26 @@ def is_col(weight_name: str) -> bool:
 
 def get_world_size() -> int:
     return dist.get_world_size() if dist.is_available() and dist.is_initialized() else 1
+
+def module_sort_key(item):
+    name, _ = item
+
+    if name == "output" or name.startswith("output."):
+        group = 2                     
+    elif name.startswith("layers."):
+        group = 0                     
+    else:
+        group = 1                     
+
+    if group == 0:
+        layer_idx = int(name.split(".")[1])
+    else:
+        layer_idx = INF               
+
+    suffix = name.split(".")[-1]
+    suffix_prio = prio.get(suffix, DEFAULT)
+
+    return (group, layer_idx, suffix_prio, name)
 
 
 class Hessian(_Hessian):
@@ -37,7 +62,7 @@ class Hessian(_Hessian):
 
 
 def shared_input_key(name: str) -> str:
-    if ".attention.w" in name:
+    if ".attention.w" in name and not ".attention.wo" in name:
         return name.split(".attention.")[0] + ".attention"
     if ".feed_forward.w1" in name or ".feed_forward.w3" in name:
         return name.split(".feed_forward.")[0] + ".feed_forward_w13"
@@ -78,7 +103,7 @@ def main():
 
     modules = sorted(
         [(n, m) for n, m in model.named_modules() if is_linear(m)],
-        key=lambda x: x[0],
+        key=module_sort_key,
     )
 
     qconfig = create_config(
@@ -91,12 +116,13 @@ def main():
     )
 
     world_size = get_world_size()
-    batch_size = 8
+    batch_size = 32
     total = wikitext.shape[0]
 
     group_H: dict[str, torch.Tensor] = {}
     N = wikitext.shape[0]                
 
+    
     for idx, (name, module) in enumerate(modules):
         if args.L is not None and idx < args.L:
             continue
@@ -122,7 +148,12 @@ def main():
             weights_only=True,
         ).float()
 
+        print(f"H_obs mean squared: {(H_obs ** 2).mean().item()} clean_H mean squared: {(clean_H ** 2).mean().item()}")
         J = H_obs - clean_H
+        
+        J = J * 1000
+        clean_H = clean_H * 1000
+        # numerical stability
         
         # print J mean squared message
         print(f"J[{name}] mean squared: {torch.mean(J**2).item()}")
@@ -135,7 +166,9 @@ def main():
             else args.key_betas if "key" in name
             else args.value_betas
         )
-
+        
+        big_err = (J**2).mean() / (clean_H**2).mean() 
+        
         if is_col(name):
             q_weight = quantsim_col(
                 module.weight,
@@ -143,7 +176,7 @@ def main():
                 betas,
                 rot=kron_h_ip,
                 H=clean_H,
-                J=J,
+                J=J if big_err > 1e-6 else None,
             )
         else:
             q_weight = quantsim(
@@ -152,11 +185,11 @@ def main():
                 betas,
                 rot=kron_h_ip,
                 H=clean_H,
-                J=J,
+                J=J if big_err > 1e-6 else None,
             )
 
         q_weight = q_weight.to(module.weight.dtype)  
-        print(((q_weight - module.weight) ** 2).mean().item(), (q_weight ** 2).mean().item())
+        print("Weight mean squared", ((module.weight) ** 2).mean().item(), "Quantized weight mean squared", (q_weight ** 2).mean().item())
         with torch.no_grad():
             module.weight.copy_(q_weight)                  
 
