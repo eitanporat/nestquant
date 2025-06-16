@@ -28,7 +28,7 @@ def quantsim(X, q, betas, rot, H=None, eps=None, J=None):
     X = X.view(-1, X.shape[-1])
 
     if J is not None:
-        X = X @ J @ torch.linalg.inv(H)    
+        X = X @ H @ torch.linalg.inv(H + J)  
                     
     elif eps is not None:
         eps2 = eps * eps
