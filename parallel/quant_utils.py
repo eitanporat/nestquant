@@ -22,11 +22,15 @@ def rot_hess(H, rot, eye_coeff=100.0):
     return H
 
 
-def quantsim(X, q, betas, rot, H=None, eps=None):
+def quantsim(X, q, betas, rot, H=None, eps=None, J=None):
+    assert J is None or eps is None, "Cannot use eps and J at the same time"
     orig_shape = X.shape
     X = X.view(-1, X.shape[-1])
 
-    if eps is not None:
+    if J is not None:
+        X = X @ J @ torch.linalg.inv(H)    
+                    
+    elif eps is not None:
         eps2 = eps * eps
         n = X.shape[-1]
         I = torch.eye(n, device=X.device)
@@ -71,8 +75,8 @@ def re_glue(X, predicate):
     return torch.chunk(all_X, world_size, dim=-1)[rank]
 
 
-def quantsim_col(X, q, betas, rot, H=None, eps=None):
-    return re_glue(X, lambda x: quantsim(x, q, betas, rot, H=H, eps=eps))
+def quantsim_col(X, q, betas, rot, H=None, eps=None, J=None):
+    return re_glue(X, lambda x: quantsim(x, q, betas, rot, H=H, eps=eps, J=J))
 
 
 def r2_score(y_true: torch.Tensor, y_pred: torch.Tensor) -> float:
