@@ -21,19 +21,24 @@ def rot_hess(H, rot, eye_coeff=100.0):
     H = H + torch.eye(H.shape[0], device=H.device) * eye_coeff
     return H
 
-
 def quantsim(X, q, betas, rot, H=None, eps=None, J=None):
     assert J is None or eps is None, "Cannot use eps and J at the same time"
     orig_shape = X.shape
     X = X.view(-1, X.shape[-1])
+    original_dtype = X.dtype
+    X = X.float()  # Convert to float32 for numerical ops
 
     if J is not None:
-        X = X @ H @ torch.linalg.inv(H + J)  
-                    
+        J = J.float()
+        X = X @ H @ torch.linalg.inv(H + J)
+        H = H.float() + J
+
+        
     elif eps is not None:
+        H = H.float()
         eps2 = eps * eps
         n = X.shape[-1]
-        I = torch.eye(n, device=X.device)
+        I = torch.eye(n, device=X.device, dtype=H.dtype)
         X = X @ (I - eps2 * torch.linalg.inv(H + eps2 * I))
         H = H + I * eps2
 
@@ -52,8 +57,7 @@ def quantsim(X, q, betas, rot, H=None, eps=None, J=None):
     X = rot(X, inverse=True)
     X = X * row_norms[:, None] / np.sqrt(N)
     X = X.reshape(orig_shape)
-    return X
-
+    return X.to(original_dtype)  # Restore original dtype (e.g., bfloat16)
 
 # The quantization of rows can be done independetly on each GPU.
 # However, sometimes the matrix is split by columns. So, we gather the matrix,

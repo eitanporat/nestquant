@@ -124,6 +124,12 @@ def main():
 
         J = H_obs - clean_H
         
+        # print J mean squared message
+        print(f"J[{name}] mean squared: {torch.mean(J**2).item()}")
+        # print clean_H mean squared message
+        print(f"clean_H[{name}] mean squared: {torch.mean(clean_H**2).item()}")
+        
+        
         betas = (
             args.act_betas if "act" in name
             else args.key_betas if "key" in name
@@ -131,23 +137,28 @@ def main():
         )
 
         if is_col(name):
-            module.weight = quantsim_col(
+            q_weight = quantsim_col(
                 module.weight,
                 args.q,
                 betas,
                 rot=kron_h_ip,
-                H=H_obs,
+                H=clean_H,
                 J=J,
             )
         else:
-            module.weight = quantsim(
+            q_weight = quantsim(
                 module.weight,
                 args.q,
                 betas,
                 rot=kron_h_ip,
-                H=H_obs,
+                H=clean_H,
                 J=J,
             )
+
+        q_weight = q_weight.to(module.weight.dtype)  
+        print(((q_weight - module.weight) ** 2).mean().item(), (q_weight ** 2).mean().item())
+        with torch.no_grad():
+            module.weight.copy_(q_weight)                  
 
         module.qconfig = qconfig
         torch.cuda.empty_cache()
