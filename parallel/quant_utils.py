@@ -28,23 +28,42 @@ def quantsim(X, q, betas, rot, H=None, eps=None, J=None):
     original_dtype = X.dtype
     X = X.float()  # Convert to float32 for numerical ops
 
+    if H is not None:
+        H = H.float()
+
     if J is not None:
-        X = X @ H @ torch.linalg.inv(H + J)
-        H = H + J
+        print("Applying QA-LDLQ correction using noise covariance J.")
+        J = J.float()
+        
+        # H_tilde is the new Hessian for the transformed problem: H + J
+        H_tilde = H + J
+        
+        # Add a small ridge for numerical stability before inverting
+        ridge = torch.eye(H_tilde.shape[0], device=H_tilde.device) * 1e-5 * H_tilde.diag().abs().mean()
+        
+        # Transformation matrix T = H * (H + J)^-1
+        T = H @ torch.linalg.inv(H_tilde + ridge)
+        
+        # Apply transformation to weights: W_tilde = W @ T
+        X = X @ T
+        # The Hessian for the transformed problem is H_tilde
+        H = H_tilde
  
     elif eps is not None:
-        H = H.float()
+        # This part remains the same
         eps2 = eps * eps
         n = X.shape[-1]
         I = torch.eye(n, device=X.device, dtype=H.dtype)
         X = X @ (I - eps2 * torch.linalg.inv(H + eps2 * I))
         H = H + I * eps2
 
+    # The rest of the function remains the same
     row_norms = torch.sqrt((X ** 2).sum(dim=1))
     N = X.shape[1]
     X = X / row_norms[:, None] * np.sqrt(N)
     X = rot(X)
     if H is not None:
+        # Note: rot_hess now operates on the updated H (which is H_tilde if J was used)
         H = rot_hess(H, rot)
 
     with torch.inference_mode():
@@ -55,7 +74,7 @@ def quantsim(X, q, betas, rot, H=None, eps=None, J=None):
     X = rot(X, inverse=True)
     X = X * row_norms[:, None] / np.sqrt(N)
     X = X.reshape(orig_shape)
-    return X.to(original_dtype)  # Restore original dtype (e.g., bfloat16)
+    return X.to(original_dtype)
 
 # The quantization of rows can be done independetly on each GPU.
 # However, sometimes the matrix is split by columns. So, we gather the matrix,

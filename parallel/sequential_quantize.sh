@@ -5,4 +5,6 @@ PYTHONPATH=/workspace/nestquant MASTER_ADDR=localhost MASTER_PORT=12355 RANK=0 W
     --store-path quantized_model --seqlen 2048 \
     --quant-act \
     --quant-kv \
-    --q 14
+    --q 14 \
+    --use-diagonal
+#    --use-scalar
