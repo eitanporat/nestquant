@@ -6,5 +6,6 @@ PYTHONPATH=/workspace/nestquant MASTER_ADDR=localhost MASTER_PORT=12355 RANK=0 W
     --quant-act \
     --quant-kv \
     --q 14 \
-    --use-diagonal
+    --use-scalar \
+    --use-j
 #    --use-scalar

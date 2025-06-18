@@ -1,0 +1,73 @@
+2025-06-18 14:33:46,269 INFO     Running with arguments:
+2025-06-18 14:33:46,269 INFO       ckpt_path: /root/.llama/checkpoints/Llama3.1-8B/original
+2025-06-18 14:33:46,269 INFO       is_llama_2: False
+2025-06-18 14:33:46,269 INFO       store_path: quantized_model
+2025-06-18 14:33:46,269 INFO       hess_path: /workspace/nestquant/hessian_llama_3_1_8B
+2025-06-18 14:33:46,269 INFO       seqlen: 2048
+2025-06-18 14:33:46,269 INFO       L: None
+2025-06-18 14:33:46,269 INFO       R: None
+2025-06-18 14:33:46,269 INFO       q: 14
+2025-06-18 14:33:46,269 INFO       quant_act: True
+2025-06-18 14:33:46,269 INFO       quant_kv: True
+2025-06-18 14:33:46,269 INFO       act_betas: [3.47, 4.74, 6.9, 18.11]
+2025-06-18 14:33:46,269 INFO       key_betas: [3.5, 4.58, 6.47, 17.06]
+2025-06-18 14:33:46,269 INFO       value_betas: [3.53, 5.59, 9.62, 29.03]
+2025-06-18 14:33:46,269 INFO       use_scalar: True
+2025-06-18 14:34:05,825 INFO     --- Quantizing layer 1/225: layers.0.attention.wk ---
+2025-06-18 14:34:05,825 INFO     First encounter of input group 'layers.0.attention'. Computing noise covariance J.
+2025-06-18 14:34:05,890 INFO     First 10 diag(H): tensor([1.4257e-03, 2.4785e-02, 7.9102e-02, 1.8234e-04, 2.2061e-01, 2.8992e-04,
+        2.8291e-11, 4.8182e-05, 7.4796e-04, 5.0962e-04], device='cuda:0',
+       dtype=torch.float32)
+2025-06-18 14:34:05,968 INFO     First 10 diag(J): tensor([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], device='cuda:0',
+       dtype=torch.float32)
+2025-06-18 14:34:05,969 INFO     H norm: 2.9543e-05, J norm: 0.0000e+00, trace(J): 0.0000e+00, use_j=False
+2025-06-18 14:34:10,480 INFO     --- Quantizing layer 2/225: layers.0.attention.wv ---
+2025-06-18 14:34:10,480 INFO     Re-using cached noise covariance J for group 'layers.0.attention'.
+2025-06-18 14:34:10,535 INFO     First 10 diag(H): tensor([1.4257e-03, 2.4785e-02, 7.9102e-02, 1.8234e-04, 2.2061e-01, 2.8992e-04,
+        2.8291e-11, 4.8182e-05, 7.4796e-04, 5.0962e-04], device='cuda:0',
+       dtype=torch.float32)
+2025-06-18 14:34:10,536 INFO     First 10 diag(J): tensor([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], device='cuda:0',
+       dtype=torch.float32)
+2025-06-18 14:34:10,537 INFO     H norm: 2.9543e-05, J norm: 0.0000e+00, trace(J): 0.0000e+00, use_j=False
+2025-06-18 14:34:14,791 INFO     --- Quantizing layer 3/225: layers.0.attention.wq ---
+2025-06-18 14:34:14,791 INFO     Re-using cached noise covariance J for group 'layers.0.attention'.
+2025-06-18 14:34:14,841 INFO     First 10 diag(H): tensor([1.4257e-03, 2.4785e-02, 7.9102e-02, 1.8234e-04, 2.2061e-01, 2.8992e-04,
+        2.8291e-11, 4.8182e-05, 7.4796e-04, 5.0962e-04], device='cuda:0',
+       dtype=torch.float32)
+2025-06-18 14:34:14,842 INFO     First 10 diag(J): tensor([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.], device='cuda:0',
+       dtype=torch.float32)
+2025-06-18 14:34:14,843 INFO     H norm: 2.9543e-05, J norm: 0.0000e+00, trace(J): 0.0000e+00, use_j=False
+2025-06-18 14:34:19,309 INFO     --- Quantizing layer 4/225: layers.0.attention.wo ---
+2025-06-18 14:34:19,309 INFO     First encounter of input group 'layers.0.attention.wo'. Computing noise covariance J.
+2025-06-18 14:39:03,041 INFO     First 10 diag(H): tensor([1.1567e-04, 1.9470e-04, 3.5070e-04, 1.1332e-03, 1.2041e-04, 9.2757e-05,
+        1.0183e-04, 2.6631e-04, 6.4180e-05, 6.4305e-05], device='cuda:0',
+       dtype=torch.float32)
+2025-06-18 14:39:03,043 INFO     First 10 diag(J): tensor([1.2150e-05, 1.2150e-05, 1.2150e-05, 1.2150e-05, 1.2150e-05, 1.2150e-05,
+        1.2150e-05, 1.2150e-05, 1.2150e-05, 1.2150e-05], device='cuda:0',
+       dtype=torch.float32)
+2025-06-18 14:39:03,044 INFO     H norm: 1.1189e-09, J norm: 3.6039e-14, trace(J): 1.2150e-05, use_j=True
+2025-06-18 14:39:07,482 INFO     --- Quantizing layer 5/225: layers.0.feed_forward.w1 ---
+2025-06-18 14:39:07,482 INFO     First encounter of input group 'layers.0.feed_forward_w13'. Computing noise covariance J.
+2025-06-18 14:43:50,920 INFO     First 10 diag(H): tensor([0.0074, 0.0066, 0.0087, 0.0078, 0.0379, 0.0073, 0.0074, 0.0090, 0.0077,
+        0.0093], device='cuda:0', dtype=torch.float32)
+2025-06-18 14:43:50,922 INFO     First 10 diag(J): tensor([0.0002, 0.0002, 0.0002, 0.0002, 0.0002, 0.0002, 0.0002, 0.0002, 0.0002,
+        0.0002], device='cuda:0', dtype=torch.float32)
+2025-06-18 14:43:50,923 INFO     H norm: 5.0167e-07, J norm: 1.1255e-11, trace(J): 2.1471e-04, use_j=True
+2025-06-18 14:43:55,633 INFO     --- Quantizing layer 6/225: layers.0.feed_forward.w3 ---
+2025-06-18 14:43:55,633 INFO     Re-using cached noise covariance J for group 'layers.0.feed_forward_w13'.
+2025-06-18 14:43:55,744 INFO     First 10 diag(H): tensor([0.0074, 0.0066, 0.0087, 0.0078, 0.0379, 0.0073, 0.0074, 0.0090, 0.0077,
+        0.0093], device='cuda:0', dtype=torch.float32)
+2025-06-18 14:43:55,746 INFO     First 10 diag(J): tensor([0.0002, 0.0002, 0.0002, 0.0002, 0.0002, 0.0002, 0.0002, 0.0002, 0.0002,
+        0.0002], device='cuda:0', dtype=torch.float32)
+2025-06-18 14:43:55,747 INFO     H norm: 5.0167e-07, J norm: 1.1255e-11, trace(J): 2.1471e-04, use_j=True
+2025-06-18 14:44:00,652 INFO     --- Quantizing layer 7/225: layers.0.feed_forward.w2 ---
+2025-06-18 14:44:00,652 INFO     First encounter of input group 'layers.0.feed_forward.w2'. Computing noise covariance J.
+2025-06-18 14:48:49,044 INFO     First 10 diag(H): tensor([2.0705e-05, 2.6757e-05, 1.4359e-05, 1.6928e-05, 1.7412e-05, 2.2946e-05,
+        1.2898e-05, 3.3118e-05, 5.9478e-05, 1.9994e-05], device='cuda:0',
+       dtype=torch.float32)
+2025-06-18 14:48:49,045 INFO     First 10 diag(J): tensor([3.4133e-06, 3.4133e-06, 3.4133e-06, 3.4133e-06, 3.4133e-06, 3.4133e-06,
+        3.4133e-06, 3.4133e-06, 3.4133e-06, 3.4133e-06], device='cuda:0',
+       dtype=torch.float32)
+2025-06-18 14:48:49,046 INFO     H norm: 1.0960e-11, J norm: 8.1270e-16, trace(J): 3.4133e-06, use_j=True
+2025-06-18 14:49:04,975 INFO     --- Quantizing layer 8/225: layers.1.attention.wk ---
+2025-06-18 14:49:04,976 INFO     First encounter of input group 'layers.1.attention'. Computing noise covariance J.
