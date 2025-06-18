@@ -29,14 +29,8 @@ def quantsim(X, q, betas, rot, H=None, eps=None, J=None):
     X = X.float()  # Convert to float32 for numerical ops
 
     if J is not None:
-        J = J.float()
-        I = torch.eye(H.shape[0], device=X.device, dtype=H.dtype)
-        # print(f"{J.sum()=}, {J.diag().sum()=}")
-        # eps2 = max((J.sum().item() / J.shape[0]), (H**2).mean().item() * 1e-6)
-        # X = X @ H @ torch.linalg.inv(H + eps2 * I)
-        print(J.diag()[:100].tolist())
-        X = X @ H @ torch.linalg.inv(H + J.diag().diag())
-        H = H.float() + J.diag().diag()
+        X = X @ H @ torch.linalg.inv(H + J)
+        H = H + J
  
     elif eps is not None:
         H = H.float()
